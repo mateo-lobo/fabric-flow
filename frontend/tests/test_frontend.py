@@ -138,12 +138,22 @@ class ApiClientTests(unittest.TestCase):
     def test_api_url_uses_environment_then_streamlit_secret(self) -> None:
         with patch.dict(os.environ, {"FABRICFLOW_API_URL": "https://env.example/"}, clear=True):
             self.assertEqual(api_client.base_url(), "https://env.example")
+        with patch.dict(os.environ, {"FABRICFLOW_API_URL": "fabricflow-api:10000"}, clear=True):
+            self.assertEqual(api_client.base_url(), "http://fabricflow-api:10000")
 
         with (
             patch.dict(os.environ, {}, clear=True),
             patch.object(api_client.st, "secrets", {"FABRICFLOW_API_URL": "https://cloud.example/"}),
         ):
             self.assertEqual(api_client.base_url(), "https://cloud.example")
+
+    def test_calculation_allows_backend_cold_start(self) -> None:
+        with patch.object(
+            api_client, "_post", return_value={"result": {}, "optimization": {}}
+        ) as post:
+            api_client.calculate(MODEL, [ROLL], [ZIPPER], 1)
+
+        self.assertEqual(post.call_args.kwargs["timeout"], 120)
 
     def test_payload_contains_only_used_rolls_and_hardware(self) -> None:
         payload = api_client.calculation_payload(

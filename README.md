@@ -39,13 +39,23 @@ Open <http://localhost:8502>. The API and interactive Swagger documentation are 
 
 ## Deploy
 
-The Streamlit interface and FastAPI backend are separate services. Streamlit Community Cloud runs the interface, not the FastAPI module.
+The Streamlit interface and FastAPI backend are separate services. The Render Blueprint can create and deploy both from this repository in one flow.
+
+### Render Blueprint
+
+1. Authorize Render's GitHub app to access `mateo-lobo/fabric-flow` if you have not already.
+2. In the Render Dashboard, choose **New > Blueprint** and select this repository on the `main` branch.
+3. Review the two services from `render.yaml`: `fabricflow-api` (FastAPI) and `fabricflow-ui` (Streamlit). Both use the Oregon region so they can communicate over Render's private network.
+4. Enter `OPENAI_API_KEY` when prompted for the API service. Never add the key to `render.yaml` or GitHub.
+5. Deploy the Blueprint and open the `fabricflow-ui` URL when both services are live. The Blueprint connects the UI to the API through its internal host and port; no API URL needs to be copied into Streamlit Secrets.
+
+The free plan may spin down while idle, so the first calculation after inactivity can take up to two minutes. The catalog is stored on the UI service's local filesystem and is not durable across service replacement; use persistent storage before relying on it in production.
 
 ### Streamlit Community Cloud
 
-Create the app from this repository and select `frontend/streamlit_app.py` as the **Main file path**. Community Cloud reads the root `requirements.txt` for the frontend dependencies.
+Community Cloud runs only the UI. Create the app from this repository and set **Main file path** to `frontend/streamlit_app.py`. It uses the root `requirements.txt`.
 
-In **App settings > Secrets**, configure the public URL of the deployed API:
+Deploy the FastAPI backend separately, then set the backend's public URL in **App settings > Secrets**:
 
 ```toml
 FABRICFLOW_API_URL = "https://your-fabricflow-api.example.com"
@@ -55,15 +65,13 @@ Do not use `127.0.0.1` here: that would point to the Streamlit container itself.
 
 ### FastAPI backend
 
-Deploy the backend separately on an ASGI-compatible host. Install `backend/requirements.txt` and start it with:
+For a separate backend deployment, install `backend/requirements.txt` and start it with:
 
 ```bash
 python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Set `OPENAI_API_KEY` and, optionally, `FABRICFLOW_LLM_MODEL` in the backend host's environment/secrets. Its `/health` endpoint should respond before you set `FABRICFLOW_API_URL` in Streamlit Cloud. Keep the existing `render.yaml` decision unchanged; these steps can be configured manually on the host.
-
-The JSON catalog is stored on the Streamlit app's local filesystem, which is ephemeral on Community Cloud. Use persistent storage before relying on catalog data in production.
+Set `OPENAI_API_KEY` and, optionally, `FABRICFLOW_LLM_MODEL` in the backend host's environment/secrets. Its `/health` endpoint should respond before you set `FABRICFLOW_API_URL` in Streamlit Cloud.
 
 ## Tests
 

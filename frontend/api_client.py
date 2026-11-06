@@ -18,6 +18,8 @@ def base_url() -> str:
             configured = st.secrets.get("FABRICFLOW_API_URL")
         except st.errors.StreamlitSecretNotFoundError:
             configured = None
+    if configured and "://" not in configured:
+        configured = f"http://{configured}"
     return (configured or "http://127.0.0.1:8000").rstrip("/")
 
 
@@ -83,7 +85,7 @@ def calculate(
     batch_size: float,
 ) -> dict[str, Any]:
     request = calculation_payload(model, rolls, hardware, batch_size)
-    response = _post("/api/calculate", request)
+    response = _post("/api/calculate", request, timeout=120)
     return {"request": request, **response}
 
 
