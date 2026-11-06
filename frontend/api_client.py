@@ -83,7 +83,7 @@ def calculate(
     batch_size: float,
 ) -> dict[str, Any]:
     request = calculation_payload(model, rolls, hardware, batch_size)
-    response = _post("/api/calculate", request, timeout=120)
+    response = _post("/api/calculate", request)
     return {"request": request, **response}
 
 
@@ -95,7 +95,6 @@ def apply_scenario(calculation: dict[str, Any], scenario: dict[str, Any]) -> dic
             "result": calculation["result"],
             "scenario": scenario,
         },
-        timeout=120,
     )
 
 

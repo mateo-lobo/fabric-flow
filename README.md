@@ -37,6 +37,34 @@ python -m streamlit run frontend/streamlit_app.py --server.port 8502
 
 Open <http://localhost:8502>. The API and interactive Swagger documentation are at <http://127.0.0.1:8000> and <http://127.0.0.1:8000/docs>.
 
+## Deploy
+
+The Streamlit interface and FastAPI backend are separate services. Streamlit Community Cloud runs the interface, not the FastAPI module.
+
+### Streamlit Community Cloud
+
+Create the app from this repository and select `frontend/streamlit_app.py` as the **Main file path**. Community Cloud reads the root `requirements.txt` for the frontend dependencies.
+
+In **App settings > Secrets**, configure the public URL of the deployed API:
+
+```toml
+FABRICFLOW_API_URL = "https://your-fabricflow-api.example.com"
+```
+
+Do not use `127.0.0.1` here: that would point to the Streamlit container itself.
+
+### FastAPI backend
+
+Deploy the backend separately on an ASGI-compatible host. Install `backend/requirements.txt` and start it with:
+
+```bash
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Set `OPENAI_API_KEY` and, optionally, `FABRICFLOW_LLM_MODEL` in the backend host's environment/secrets. Its `/health` endpoint should respond before you set `FABRICFLOW_API_URL` in Streamlit Cloud. Keep the existing `render.yaml` decision unchanged; these steps can be configured manually on the host.
+
+The JSON catalog is stored on the Streamlit app's local filesystem, which is ephemeral on Community Cloud. Use persistent storage before relying on catalog data in production.
+
 ## Tests
 
 ```powershell
@@ -52,28 +80,3 @@ python -m unittest discover -s frontend/tests -v
 - `frontend/` contains the Streamlit pages, API client and local catalog.
 
 The local catalog at `frontend/data/catalog.json` is ignored by Git. The assistant's in-memory conversation sessions reset when the API restarts. This is a prototype and does not include authentication.
-
-## Deploy
-
-The Streamlit UI and FastAPI backend are separate services. Deploy the API first, then configure the Streamlit app to use its public URL.
-
-### API on Render
-
-1. In Render, choose **New > Blueprint** and select `mateo-lobo/fabric-flow` on the `main` branch.
-2. Render reads `render.yaml` and creates the `fabricflow-api` web service. Enter a newly rotated `OPENAI_API_KEY` when prompted; never put the key in this repository.
-3. After the service is live, copy its `https://...onrender.com` URL.
-
-The free Render plan may spin down when idle. The first request after inactivity can take longer to respond.
-
-### UI on Streamlit Community Cloud
-
-1. Create an app from `mateo-lobo/fabric-flow`, branch `main`, entrypoint `frontend/streamlit_app.py`.
-2. In the app's **Settings > Secrets**, set:
-
-```toml
-FABRICFLOW_API_URL = "https://your-fabricflow-api.onrender.com"
-```
-
-The frontend reads that value from `st.secrets`. Its dependencies are in `frontend/requirements.txt`.
-
-Community Cloud's local filesystem is ephemeral, so the JSON catalog is suitable for a prototype but not durable production storage.
