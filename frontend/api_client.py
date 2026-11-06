@@ -4,6 +4,7 @@ import os
 from typing import Any
 
 import httpx
+import streamlit as st
 
 
 class ApiError(Exception):
@@ -11,7 +12,13 @@ class ApiError(Exception):
 
 
 def base_url() -> str:
-    return os.environ.get("FABRICFLOW_API_URL", "http://127.0.0.1:8000").rstrip("/")
+    configured = os.environ.get("FABRICFLOW_API_URL")
+    if not configured:
+        try:
+            configured = st.secrets.get("FABRICFLOW_API_URL")
+        except st.errors.StreamlitSecretNotFoundError:
+            configured = None
+    return (configured or "http://127.0.0.1:8000").rstrip("/")
 
 
 def _detail(response: httpx.Response) -> str:
@@ -76,7 +83,7 @@ def calculate(
     batch_size: float,
 ) -> dict[str, Any]:
     request = calculation_payload(model, rolls, hardware, batch_size)
-    response = _post("/api/calculate", request)
+    response = _post("/api/calculate", request, timeout=120)
     return {"request": request, **response}
 
 
@@ -88,6 +95,7 @@ def apply_scenario(calculation: dict[str, Any], scenario: dict[str, Any]) -> dic
             "result": calculation["result"],
             "scenario": scenario,
         },
+        timeout=120,
     )
 
 

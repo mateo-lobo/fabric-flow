@@ -135,6 +135,16 @@ class LocalizationTests(unittest.TestCase):
 
 
 class ApiClientTests(unittest.TestCase):
+    def test_api_url_uses_environment_then_streamlit_secret(self) -> None:
+        with patch.dict(os.environ, {"FABRICFLOW_API_URL": "https://env.example/"}, clear=True):
+            self.assertEqual(api_client.base_url(), "https://env.example")
+
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(api_client.st, "secrets", {"FABRICFLOW_API_URL": "https://cloud.example/"}),
+        ):
+            self.assertEqual(api_client.base_url(), "https://cloud.example")
+
     def test_payload_contains_only_used_rolls_and_hardware(self) -> None:
         payload = api_client.calculation_payload(
             MODEL, [ROLL, {**ROLL, "id": "unused"}], [ZIPPER, {**ZIPPER, "id": "unused"}], 5
