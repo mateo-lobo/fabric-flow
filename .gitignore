@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/data/catalog.json
+frontend/data/*.tmp
+.streamlit/secrets.toml
